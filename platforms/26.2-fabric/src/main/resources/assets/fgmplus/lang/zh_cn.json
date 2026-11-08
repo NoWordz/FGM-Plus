@@ -1,0 +1,23 @@
+{
+  "fgmplus.studio.entry": "造型工作室...",
+  "fgmplus.studio.title": "造型工作室",
+  "fgmplus.studio.scale": "缩放 %s: x%s",
+  "fgmplus.studio.pos": "位置 %s: %s",
+  "fgmplus.studio.perkiness": "挺拔度: %s°",
+  "fgmplus.studio.pos_z_tip": "右 = 向前凸出，左 = 向身体收回；超出安全包络的部分会被自动削平",
+  "fgmplus.studio.sound_folder": "音效文件夹",
+  "fgmplus.studio.preview": "试听",
+  "fgmplus.studio.preview_tip": "试听自定义受伤音效；文件有变动时才会重载资源",
+  "fgmplus.studio.reset": "重置",
+  "fgmplus.studio.debug_on": "诊断平面: 开",
+  "fgmplus.studio.debug_off": "诊断平面: 关",
+  "fgmplus.studio.debug_tip": "绿色半透明面板 = 计算出的躯干背面基准；贴身则防穿模钳制可信",
+  "fgmplus.studio.sound_none": "未找到 .ogg（试听播原版）",
+  "fgmplus.studio.sound_pending": "%d 个音效待生效（点试听自动重载）",
+  "fgmplus.studio.sound_enabled": "已启用 %d 个音效： %s",
+  "fgmplus.studio.roundness": "圆度: %s%%",
+  "fgmplus.studio.roundness_tip": "0% = 原版方块形，100% = 全圆形；皮肤/外套/护甲全部一起变成超椭球面",
+  "fgmplus.studio.cleavage_on": "乳沟桥接：开",
+  "fgmplus.studio.cleavage_off": "乳沟桥接：关",
+  "fgmplus.studio.cleavage_tip": "高圆度时把内侧向躯干中线桥接，两个曲面交叠成一条乳沟；关闭恢复纯椭球轮廓，FGM 的胸部间距滑条恢复原有效果"
+}

@@ -1,0 +1,84 @@
+plugins {
+	id 'fabric-loom' version "${loom_version}"
+}
+
+// 共享层装配：读仓库级身份 + 把 shared/ 与本目标挂载的层接进源集。
+// 判定依据在 versions/*.json，本平台不做任何目标名硬编码。
+apply from: '../../gradle/fgmplus-layers.gradle'
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = 'Modrinth'
+				url = 'https://api.modrinth.com/maven'
+			}
+		}
+		filter {
+			includeGroup 'maven.modrinth'
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	// MC 26.x 无混淆：无 mappings 层（fabric.loom.disableObfuscation=true），
+	// mod 依赖不再重映射，modImplementation 已不存在——直接走普通 implementation（照上游 FGM 5.0.0 写法）
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+	// Upstream mod this expands on; provides both compile-time internals and the dev-runtime jar
+	implementation "maven.modrinth:female-gender:${project.fgm_version}"
+}
+
+loom {
+	runs {
+		client {
+			//Offline smoke hook: FGMPLUS_QUICKPLAY='<world name>' jumps straight into
+			//that singleplayer world on launch as a FIXED dev user (Player296, so the
+			//pre-seeded per-UUID FGM config + fgmplus shape files match). The breast
+			//render path only runs with a level loaded (GenderLayer bails on the main
+			//menu), so the automated smoke needs this to actually exercise the mesh
+			//code. Unset = normal interactive launch
+			def quickplay = System.getenv('FGMPLUS_QUICKPLAY')
+			if(quickplay != null && !quickplay.isEmpty()) {
+				programArgs '--quickPlaySingleplayer', quickplay, '--username', 'Player296'
+			}
+		}
+	}
+}
+
+processResources {
+	inputs.property 'version', project.mod_version
+	inputs.property 'minecraft_dependency', project.minecraft_dependency
+
+	filesMatching('fabric.mod.json') {
+		expand 'version': project.mod_version,
+				'minecraft_dependency': project.minecraft_dependency
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = 'UTF-8'
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	// LICENSE lives at the repo root; fgmplusRepoRoot is injected by the mounting script
+	from(project.ext.fgmplusRepoRoot) {
+		include 'LICENSE'
+		rename { "${it}_${project.base.archivesName.get()}" }
+	}
+}

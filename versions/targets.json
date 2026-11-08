@@ -3,7 +3,8 @@
     "【支持哪些目标，一处声明】CI 遍历这里所有 buildable 的条目逐个构建，把全部 jar 挂在同一个 Release 上。",
     "【矩阵是规则，不是清单】工程目录存在 = 矩阵里有条目；buildable: false + note 写明不做的目标。",
     "tools/verify_targets.py 校验工程目录与矩阵互相对得上、身份只在仓库根一份。",
-    "【mappings】两个目标都吃 Mojang 官方名（ForgeGradle official channel / loom officialMojangMappings），",
+    "【mappings】1.21.x 及以前吃 Mojang 官方名（ForgeGradle official channel / loom officialMojangMappings），",
+    "MC 26.x 去混淆后 loom 1.17 不再声明任何映射层，mappings=none 表示直连官方名（构建脚本零 mappings 块）；",
     "shared/ 不需要映射孪生层；若将来加 Yarn 家族目标，官方名代码进 layers/mapping/official/，Yarn 侧留孪生。",
     "【unverified】该目标里靠推断填的字段；buildable: true 不许留 unverified。"
   ],
@@ -59,6 +60,34 @@
     "layers": [],
     "upstream": "maven.modrinth:female-gender:3.2.2",
     "note": "targets FGM 3.2.2 (ModDevGradle 2.0.147); loader 21.1.252 verified by build+smoke",
+    "unverified": []
+  },
+  "26.1-fabric": {
+    "minecraft": "26.1",
+    "loader": "fabric",
+    "loader_version": "0.19.5",
+    "mappings": "none",
+    "java": 25,
+    "gradle": "9.7.1",
+    "project": "platforms/26.1-fabric",
+    "buildable": true,
+    "layers": [],
+    "upstream": "maven.modrinth:female-gender:5.0.0+mc26.1-fabric",
+    "note": "targets FGM 5.0.0 final (26.1-26.1.2 one jar); unobfuscated MC, loom 1.17 no mappings; loader/api versions taken from FGM stonecutter.properties.toml 26.1 section",
+    "unverified": []
+  },
+  "26.2-fabric": {
+    "minecraft": "26.2",
+    "loader": "fabric",
+    "loader_version": "0.19.5",
+    "mappings": "none",
+    "java": 25,
+    "gradle": "9.7.1",
+    "project": "platforms/26.2-fabric",
+    "buildable": true,
+    "layers": [],
+    "upstream": "maven.modrinth:female-gender:5.0.0+mc26.2-fabric",
+    "note": "targets FGM 5.0.0 final; unobfuscated MC, loom 1.17 no mappings; api version from FGM stonecutter.properties.toml 26.2 section",
     "unverified": []
   }
 }

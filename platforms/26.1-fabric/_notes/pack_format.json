@@ -1,0 +1,34 @@
+{
+ "26.2": {
+  "pack_version": {},
+  "java_version": {
+   "component": "java-runtime-epsilon",
+   "majorVersion": 25
+  },
+  "releaseTime": "2026-06-16T12:03:33+00:00"
+ },
+ "26.1.2": {
+  "pack_version": {},
+  "java_version": {
+   "component": "java-runtime-epsilon",
+   "majorVersion": 25
+  },
+  "releaseTime": "2026-04-09T10:12:23+00:00"
+ },
+ "26.1.1": {
+  "pack_version": {},
+  "java_version": {
+   "component": "java-runtime-epsilon",
+   "majorVersion": 25
+  },
+  "releaseTime": "2026-04-01T09:06:36+00:00"
+ },
+ "26.1": {
+  "pack_version": {},
+  "java_version": {
+   "component": "java-runtime-epsilon",
+   "majorVersion": 25
+  },
+  "releaseTime": "2026-03-24T12:11:04+00:00"
+ }
+}

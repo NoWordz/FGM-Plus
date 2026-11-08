@@ -102,8 +102,9 @@ def main() -> int:
             if t["project"] in declared_projects:
                 fail(f"target {name}: project {t['project']} already claimed by another entry")
             declared_projects.add(t["project"])
-        if t.get("mappings") not in ("official", "yarn"):
-            fail(f"target {name}: mappings must be 'official' or 'yarn', got {t.get('mappings')!r}")
+        # MC 26.x 去混淆后 loom 不再声明任何映射层，"none" 表示直连官方名
+        if t.get("mappings") not in ("official", "yarn", "none"):
+            fail(f"target {name}: mappings must be 'official', 'yarn' or 'none', got {t.get('mappings')!r}")
         if t.get("loader") not in LOADER_DIRS:
             fail(f"target {name}: loader must be one of {sorted(LOADER_DIRS)}")
         for lname in t.get("layers", []):
