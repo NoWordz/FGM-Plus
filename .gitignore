@@ -26,3 +26,6 @@ platforms/*/_probe/*.txt
 
 # internal working plans (local-only, never publish)
 PLAN-*.md
+
+# deploy backups (old jars kept on disk, never in git)
+deploy_backup/
