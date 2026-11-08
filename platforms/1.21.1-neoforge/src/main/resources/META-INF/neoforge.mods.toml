@@ -1,6 +1,7 @@
 modLoader = "javafml"
 loaderVersion = "[4,)"
 license = "GPLv3"
+issueTrackerURL = "https://github.com/NoWordz/FGM-Plus/issues"
 
 #without this FML never loads our mixin config: the mod starts fine but every
 #injection silently no-ops (MDG has no mixingradle to write the manifest for us)
@@ -12,6 +13,7 @@ modId = "fgmplus"
 version = "${file.jarVersion}"
 displayName = "FGM Plus"
 authors = "E33EPUS"
+displayURL = "https://github.com/NoWordz/FGM-Plus"
 description = '''
 FGM Plus (Female Gender Mod Plus): a comprehensive expansion for Wildfire's
 Female Gender Mod — real per-player bust shaping (perkiness, per-axis scaling

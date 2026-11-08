@@ -1,35 +1,69 @@
 # FGM Plus
 
-Real bust scaling and per-player breast shaping for [Wildfire's Female Gender Mod](https://github.com/FemaleGenderMod/FemaleGenderMod). Based on Female Plastic Surgery by Rinko1231 (GPLv3).
+<em>Real bust scaling, per-player shaping and custom hurt sounds for Wildfire's Female Gender Mod.</em>
 
-**Targets** (single repo, one `mod_version` for all):
+## What it is
 
-| Target | Upstream | Jar |
-|---|---|---|
-| Forge 1.20.1 | FGM 3.1 (1.20.1-3.x) | `fgmplus-forge-1.20.1-<ver>.jar` |
-| Fabric 1.21.11 | FGM 5.0.0-Beta.3+1.21.11 | `fgmplus-fabric-1.21.11-<ver>.jar` |
-| Fabric 1.21.1 | FGM 3.2.1+1.21 | `fgmplus-fabric-1.21.1-<ver>.jar` |
-| NeoForge 1.21.1 | FGM 3.2.2 | `fgmplus-neoforge-1.21.1-<ver>.jar` |
+An expansion for **[Wildfire's Female Gender Mod](https://modrinth.com/mod/female-gender)** (FGM). Where FGM's slider stops at a fixed cap and only moves the model around, FGM Plus grows the model itself and adds a shaping studio on top: sizes past the cap, three-axis scaling, perkiness, roundness, per-player shapes that sync to everyone, and your own hurt sounds. A fork of **Female Plastic Surgery** by [Rinko1231](https://github.com/Rinko1231/Female-Plastic-Surgery-for-WFG) (GPLv3). Client-side.
 
-## What it does
+## Features
 
-- **Real scale above the vanilla cap** — bust sizes past the 0.8 slider limit grow the actual breast geometry instead of only shifting its position.
-- **Shape Studio** — a per-player editor (entry button in FGM's wardrobe): three-axis scale, perkiness (counteracts FGM's droop), body-space position offsets, live preview, synced between players carrying the mod.
-- **Anti-clip back flattening** — breast vertices beyond the torso-back plane are clamped onto it per-vertex, so extreme sizes never poke through the back; jacket and armor layers follow.
-- **Widened FGM sliders** — configurable caps for bust size, offsets, bounce and floppy multipliers.
-- **Custom hurt sounds** — drop *.ogg files into `config/fgmplus/sounds/`; they replace FGM's female hurt sound with a random pick per play (preview button in the Shape Studio).
+- **Real bust scaling** — sizes above FGM's cap grow the actual geometry, up to a 500% readout.
+- **Shape Studio** — a per-player editor in FGM's wardrobe: three-axis scale, perkiness, position offsets, roundness, live preview, synced to everyone running the mod.
+- **Roundness** — 0–100% morphs FGM's flat box into a superellipsoid across skin, jacket, armor and glint, keeping all physics.
+- **Cleavage bridge** (1.21.1) — closes the inner gap between the two rounds at high roundness; toggleable, ON by default.
+- **Anti-clip flattening** — vertices past the torso back are clamped, so extreme sizes never poke through.
+- **Widened sliders & hurt sounds** — configurable caps for FGM's sliders, plus random custom hurt sounds from a folder.
 
-## Repository layout
+## Compatibility
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) (e33chat / AtomChat style: repo-root identity, `versions/targets.json` matrix, `shared/` neutral layer, per-loader `platforms/`).
+| Target | Requires |
+| --- | --- |
+| Forge 1.20.1 | FGM 1.20.1-3.x |
+| Fabric 1.21.1 | Fabric API, FGM 3.2.1+1.21 |
+| NeoForge 1.21.1 | FGM 3.2.2 |
+| Fabric 1.21.11 | Fabric API, FGM 5.0.0-Beta.3+1.21.11 |
 
+Download the jar for your loader and game version — there is no universal build. All four are client-side; put it on the server too (with FGM) so other players see your shape.
+
+## Configuration
+
+Config is `config/fgmplus/fgmplus.toml` on Forge and `config/fgmplus/fgmplus.json` elsewhere. It holds the widened slider caps — `bustSizeMax` (default 4.0, the 500% readout), `bustOffsetYMin`, `bustOffsetZMin`, `bustOffsetZMax`, `bounceMultiplierMax`, `floppyMultiplierMax`. Your shape lives in `config/fgmplus/shapes/`, hurt sounds in `config/fgmplus/sounds/`.
+
+## Known limitations
+
+- FGM's readout is ×1.25, so `bustSizeMax` 4.0 reads as 500% — values above 100% are expected.
+- Widening changes the slider range only; already-saved values keep their number.
+- The cleavage bridge is only on the 1.21.1 builds.
+- Heavy Iris/Sodium shader stacks on 1.21.1 NeoForge can shade the breasts black — a shader-pipeline interaction, not a defect in this mod.
+
+## FAQ
+
+**Do I need it on the server?** — Not for your own view; install it (with FGM) there so others see your shape.
+
+**Does it replace FGM?** — No, FGM stays required and unchanged; FGM Plus adds to it.
+
+**Where do hurt sounds go?** — `config/fgmplus/sounds/` (`.ogg`), created on first launch.
+
+**Why does the slider go past 100%?** — That is the widened range, not an error.
+
+## Install
+
+1. Install [FGM](https://modrinth.com/mod/female-gender) for your loader (Fabric also needs Fabric API).
+2. Drop the matching FGM Plus jar into `mods/`.
+3. Open FGM's wardrobe and pick **Shape Studio…**.
+
+## Building from source
+
+`versions/targets.json` declares the target matrix, `shared/` is the mapping-neutral layer, and `platforms/<mc>-<loader>/` is one Gradle project per target.
+
+```bash
+bash tools/build_all.sh                          # guard gate + build every target
+bash tools/collect_jars.sh                       # collect into dist/<version>/
+python tools/verify_targets.py                   # structure self-check
+python tools/store_copy.py --platform modrinth  # derive the store body
 ```
-bash tools/build_all.sh     # guard gate + build every target
-bash tools/collect_jars.sh  # collect artifacts into dist/<version>/
-```
-
-Deployable jars land in `dist/<mod_version>/`.
 
 ## License
 
-GPLv3, same as the original. See LICENSE.
+GPLv3, same as the original and its ancestor. See [LICENSE](LICENSE).

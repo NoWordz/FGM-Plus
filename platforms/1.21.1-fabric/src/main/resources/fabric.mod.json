@@ -8,7 +8,9 @@
 		"E33EPUS"
 	],
 	"contact": {
-		"homepage": "https://github.com/E33EPUS/FGMPlus"
+		"homepage": "https://github.com/NoWordz/FGM-Plus",
+		"sources": "https://github.com/NoWordz/FGM-Plus",
+		"issues": "https://github.com/NoWordz/FGM-Plus/issues"
 	},
 	"license": "GPLv3",
 	"environment": "*",

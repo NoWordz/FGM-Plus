@@ -1,12 +1,14 @@
 modLoader="javafml"
 loaderVersion="[43,)"
 license="GPLv3"
+issueTrackerURL="https://github.com/NoWordz/FGM-Plus/issues"
 
 [[mods]]
 modId="fgmplus"
 version="${file.jarVersion}"
 displayName="FGM Plus"
 authors="E33EPUS"
+displayURL="https://github.com/NoWordz/FGM-Plus"
 description='''
 FGM Plus (Female Gender Mod Plus): a comprehensive expansion for Wildfire's
 Female Gender Mod — real per-player bust shaping (perkiness, per-axis scaling
