@@ -217,6 +217,11 @@ tasks.named('processResources', ProcessResources).configure {
 */
 // Example for how to get properties into the manifest for reading at runtime.
 tasks.named('jar', Jar).configure {
+    from(project.ext.fgmplusRepoRoot) {
+        include 'LICENSE'
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+
     manifest {
         attributes([
                 'Specification-Title'     : mod_id,

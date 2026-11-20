@@ -31,14 +31,8 @@ public final class FgmPlusConfig {
 	public static double bounceMultiplierMax = 1.0;  // [0.5, 3.0], FGM default bound 0.5
 	public static double floppyMultiplierMax = 1.5;  // [1.0, 3.0], FGM default bound 1.0
 
-	// Back-flatten pull strategy for the roundness mesh. Iris recomputes entity face
-	// normals from vertex positions (MixinBufferBuilder#fillExtendedData overwrites what
-	// we write), so a per-vertex pull stretches curved quads and their recomputed
-	// normals rotate away from the surface - under directional-lighting shader packs
-	// (Photon etc.) those quads render black; vanilla's 0.4 ambient floor hides it.
-	// per_quad translates each quad rigidly by its deepest vertex's depth, keeping the
-	// shape (and therefore the recomputed normal) intact. "off" disables the pull.
-	public static String meshPullMode = "per_quad"; // per_quad | per_vertex | off
+	// A shared depth transform keeps adjacent roundness quads joined at the back plane.
+	public static String meshPullMode = "continuous"; // continuous | per_vertex | off
 	public static boolean meshDebugLog = false;     // throttled pull stats for diagnosing shader-only artifacts
 	// Render the roundness mesh as the flat box in Iris's shadow pass. Vanilla entity
 	// geometry is all planar boxes, so shader packs tune their shadow-map normal bias
@@ -54,12 +48,8 @@ public final class FgmPlusConfig {
 	public static boolean meshDebugNoBridge = false;  // mesh builds without the cleavage bridge
 	public static int meshDebugMaxQuads = -1;         // emit only the first N quads of the mesh (-1 = all); count sweep
 	public static boolean meshDebugFullUv = false;   // each sub-quad gets the source face's full corner UVs (smeared texture, diagnostic)
-	//Snap every sub-quad's corners to the center of the texel it covers. The exact
-	//1-texel sub-quad UVs sit ON atlas texel boundaries, and shader packs' mipmapped
-	//atlas sampling renders those fragments black (vanilla's un-mipped sampling is
-	//fine) - the Photon black-chest report. Texel-center UVs keep the same 1:1 texel
-	//mapping but every sample lands inside the texel. fullUv (whole face rect per
-	//sub-quad) renders lit in-game, confirming the sampling-side mechanism.
+	// Keep UVs inside their subdivision cells without collapsing their gradients.
+	// Retain the existing JSON key so existing configurations keep their preference.
 	public static boolean meshTexelCenterUv = true;
 
 	private static boolean loaded;
@@ -212,7 +202,10 @@ public final class FgmPlusConfig {
 	private static String optPullMode(JsonObject json) {
 		try {
 			String value = json.get("meshPullMode").getAsString();
-			if("per_quad".equals(value) || "per_vertex".equals(value) || "off".equals(value)) {
+			if("per_quad".equals(value)) {
+				return "continuous";
+			}
+			if("continuous".equals(value) || "per_vertex".equals(value) || "off".equals(value)) {
 				return value;
 			}
 		} catch(Exception ignored) {

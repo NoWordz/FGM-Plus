@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.7.0
+
+**新增**
+
+- 新增 Minecraft 26.1–26.1.2 和 26.2 的 Fabric 构建，适配 FGM 5.0.0 正式版。
+
+**修复**
+
+- Fabric 26.2 的圆形模型沿用 FGM 的躯干变换，并在防穿模时保持相邻网格连续和纹理采样稳定。
+- Fabric 26.2 的造型工作室入口仅在查看自己的玩家时显示，自定义受伤音效在客户端播放。
+- Fabric 26.2 修复旧配置迁移，按当前游戏资源包格式生成音效包，并让包元数据兼容不同地区设置。
+
+**说明**
+
+- 在 Fabric 26.2 上同时使用 Iris、Photon 和 3D Skin Layers 时，如果圆形模型出现黑块，在 3D Skin Layers 中开启 Iris 兼容模式。
+- 感谢 XyOfficial977 提交 Fabric 26.2 移植方案。[PR #1](https://github.com/NoWordz/FGM-Plus/pull/1)
+
+----
+
+**Added**
+
+- Added Fabric builds for Minecraft 26.1–26.1.2 and 26.2 with FGM 5.0.0.
+
+**Fixed**
+
+- On Fabric 26.2, rounded models follow FGM's torso transforms and preserve mesh continuity and texture sampling when fitted to the torso.
+- On Fabric 26.2, the Shape Studio entry is limited to your own player and custom hurt sounds play locally.
+- On Fabric 26.2, legacy settings migrate correctly and custom sound packs use the current game format with locale-independent metadata.
+
+**Notes**
+
+- On Fabric 26.2, enable Iris Compatibility Mode in 3D Skin Layers if rounded models show black patches with Iris and Photon.
+- Thanks to XyOfficial977 for contributing the Fabric 26.2 port. [PR #1](https://github.com/NoWordz/FGM-Plus/pull/1)
+
 ## v1.6.0
 
 > 同一版本号的第二次交付：1.6.0 的 jar 在验收期间已就地替换（见下方「修复（1.6.0 补发）」），部署以最新构建为准。
