@@ -11,7 +11,6 @@ import io.github.e33epus.fgmplus.render.RenderCapture;
 import io.github.e33epus.fgmplus.shape.ShapeData;
 import io.github.e33epus.fgmplus.shape.ShapeRenderState;
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
 import org.joml.Matrix4f;
@@ -89,34 +88,18 @@ public abstract class GenderLayerMixin {
 		//the main positional translate (which reads zOffset) at the vanilla cap level
 		this.zOffset = Math.max(this.zOffset, fp$CAP_Z_OFFSET);
 
-		//Body view = entry pose (the stack is untouched at HEAD) + everything the
-		//method applies before the per-breast transforms: the baby terms, the root
-		//part transform (model.root().translateAndRotate runs BEFORE body in
-		//GenderLayer.setupTransformations) and the body-part transform
-		//(translate(part.xyz * 0.0625) then guarded zRot/yRot/xRot mulPose). The
-		//armor layer enters through the same (super) method with its own entry pose
-		//and the same root+body transforms, so the clamp plane is consistent for
-		//skin, jacket-wear and armor geometry alike.
+		// Replay FGM's torso transforms on a copy of the entry pose. Using ModelPart's
+		// own method preserves its rotation and per-axis scale in the clamp plane.
 		try {
-			ModelPart root = model.root();
-			ModelPart body = model.body;
-			Matrix4f view = new Matrix4f(matrixStack.last().pose());
+			PoseStack bodyPose = new PoseStack();
+			bodyPose.last().set(matrixStack.last());
 			if(state.isBaby) {
-				view.scale(state.ageScale);
-				view.translate(0.0F, 0.75F, 0.0F);
+				bodyPose.scale(state.ageScale, state.ageScale, state.ageScale);
+				bodyPose.translate(0.0F, 0.75F, 0.0F);
 			}
-			view.translate(root.x * 0.0625F, root.y * 0.0625F, root.z * 0.0625F);
-			if(root.zRot != 0.0F || root.yRot != 0.0F || root.xRot != 0.0F) {
-				view.rotateZ(root.zRot);
-				view.rotateY(root.yRot);
-				view.rotateX(root.xRot);
-			}
-			view.translate(body.x * 0.0625F, body.y * 0.0625F, body.z * 0.0625F);
-			if(body.zRot != 0.0F || body.yRot != 0.0F || body.xRot != 0.0F) {
-				view.rotateZ(body.zRot);
-				view.rotateY(body.yRot);
-				view.rotateX(body.xRot);
-			}
+			model.root().translateAndRotate(bodyPose);
+			model.body.translateAndRotate(bodyPose);
+			Matrix4f view = bodyPose.last().pose();
 			Matrix4f inv = view.invert(new Matrix4f());
 			float roundness = fp$shape != null ? fp$shape.getRoundness() : 0.0F;
 			boolean cleavage = fp$shape == null || fp$shape.isCleavage();

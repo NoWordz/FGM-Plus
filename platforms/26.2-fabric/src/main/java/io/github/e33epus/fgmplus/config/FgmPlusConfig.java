@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import io.github.e33epus.fgmplus.FgmPlusMod;
 import net.fabricmc.loader.api.FabricLoader;
 
+import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -116,16 +117,21 @@ public final class FgmPlusConfig {
 		}
 		//config lives at config/fgmplus/fgmplus.json since 1.6.1 (was fgmplus.json in
 		//the config root); carry the old file over so slider-widening settings survive
+		Path legacy = FabricLoader.getInstance().getConfigDir().resolve(FgmPlusMod.MODID + ".json");
+		Path source = file;
 		try {
-			Path legacy = FabricLoader.getInstance().getConfigDir().resolve(FgmPlusMod.MODID + ".json");
 			if(!Files.exists(file) && Files.isRegularFile(legacy)) {
+				Files.createDirectories(file.getParent());
 				Files.move(legacy, file);
 			}
-		} catch(Exception e) {
+		} catch(IOException | SecurityException e) {
 			FgmPlusMod.LOGGER.warn("FGM Plus: could not migrate the old config file", e);
+			if(!Files.isRegularFile(file)) {
+				source = legacy;
+			}
 		}
-		if(Files.isRegularFile(file)) {
-			try(Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+		if(Files.isRegularFile(source)) {
+			try(Reader reader = Files.newBufferedReader(source, StandardCharsets.UTF_8)) {
 				JsonObject json = GSON.fromJson(reader, JsonObject.class);
 				if(json != null) {
 					bustSizeMax = clamp(opt(json, "bustSizeMax", bustSizeMax), 0.8, 4.0);
@@ -147,9 +153,12 @@ public final class FgmPlusConfig {
 				FgmPlusMod.LOGGER.warn("FGM Plus: failed to read config, using defaults", e);
 			}
 		}
+		if(source.equals(legacy)) {
+			return;
+		}
 		save();
 		try {
-			lastMtime = Files.getLastModifiedTime(file()).toMillis();
+			lastMtime = Files.getLastModifiedTime(file).toMillis();
 		} catch(Throwable ignored) {
 		}
 	}

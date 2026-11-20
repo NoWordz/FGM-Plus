@@ -30,7 +30,7 @@
 		"minecraft": "${minecraft_dependency}",
 		"java": ">=25",
 		"fabric-api": "*",
-		"female_gender_mod": "*"
+		"female_gender_mod": ">=5.0.0"
 	},
 	"custom": {
 		"modmenu": {

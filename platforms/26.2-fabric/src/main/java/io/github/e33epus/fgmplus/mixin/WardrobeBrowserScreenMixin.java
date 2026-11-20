@@ -1,10 +1,9 @@
 package io.github.e33epus.fgmplus.mixin;
 
 import com.wildfire.client.gui.WildfireButton;
-import com.wildfire.client.gui.screen.BaseWildfireScreen;
 import com.wildfire.client.gui.screen.WardrobeBrowserScreen;
 import io.github.e33epus.fgmplus.gui.ShapeStudioScreen;
-import net.minecraft.client.Minecraft;
+import com.wildfire.common.entities.players.PlayerConfigHolder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
@@ -28,15 +27,16 @@ public abstract class WardrobeBrowserScreenMixin extends Screen {
 
 	@Inject(method = "init", at = @At("TAIL"), require = 1, remap = false)
 	private void fp$addShapeStudioButton(CallbackInfo ci) {
-		//'this' is the merged WardrobeBrowserScreen instance at runtime; the
-		//displayed avatar's config reaches the studio screen through the accessor
+		// Shape Studio stores and renders shapes only for players.
+		if(!(((BaseWildfireScreenAccessor) this).fgmplus$getConfig() instanceof PlayerConfigHolder player)) {
+			return;
+		}
 		this.addRenderableWidget(new WildfireButton.Builder()
 				.message(() -> Component.translatable("fgmplus.studio.entry"))
 				.position(this.width / 2 - 36, this.height / 2 - 41)
 				.size(157, 20)
-				.onPress(button -> Minecraft.getInstance().gui.setScreen(new ShapeStudioScreen(
-						Component.translatable("fgmplus.studio.title"), (Screen) (Object) this,
-						((BaseWildfireScreenAccessor) this).fgmplus$getConfig())))
+				.onPress(button -> this.minecraft.gui.setScreen(new ShapeStudioScreen(
+						Component.translatable("fgmplus.studio.title"), this, player)))
 				.build(Util.getMillis()));
 	}
 }
