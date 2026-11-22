@@ -2,6 +2,10 @@ package io.github.e33epus.fgmplus.render;
 
 import org.joml.Matrix4f;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.WeakHashMap;
+
 /**
  * Per-frame capture bridge between the transform window inside FGM's
  * {@code GenderLayer#setupTransformations} and the deferred breast geometry
@@ -10,9 +14,8 @@ import org.joml.Matrix4f;
  * <p>1.21.9+ renders entities through submit/collect pipelines: the vertex
  * submission no longer happens synchronously inside the layer, so the 1.20.1
  * approach of keeping the body view in static mixin fields breaks. Instead the
- * window captured while the layer transforms are set up is polled once per
- * geometry pass ({@link #pollWindow()}) and stored on the BreastModel instance
- * itself, where the deferred renderToBuffer finds it again.</p>
+ * window captured while the layer transforms are set up is registered per
+ * command (weakly keyed) and consumed when the command actually renders.</p>
  *
  * <p>{@code layerIndex} numbers the geometry passes within one frame (0 = skin
  * breast, then jacket-wear, then armor/trim/glint); only index 0 clamps onto
@@ -28,6 +31,8 @@ public final class RenderCapture {
 	private static final ThreadLocal<Matrix4f> ACTIVE_INV = new ThreadLocal<>();
 	private static final ThreadLocal<Float> ACTIVE_ROUNDNESS = ThreadLocal.withInitial(() -> 0.0F);
 	private static final ThreadLocal<Boolean> ACTIVE_CLEAVAGE = ThreadLocal.withInitial(() -> Boolean.TRUE);
+	private static final Map<Object, BodyWindow> BY_COMMAND =
+			Collections.synchronizedMap(new WeakHashMap<>());
 	private static final ThreadLocal<Integer> LAYER_INDEX = ThreadLocal.withInitial(() -> 0);
 
 	private RenderCapture() {
@@ -63,21 +68,18 @@ public final class RenderCapture {
 		return ACTIVE_VIEW.get();
 	}
 
-	/**
-	 * Called from the BreastModel constructor (once per geometry pass, in draw
-	 * order); returns the window stamped with the current layer index and bumps
-	 * that index, or null when constructed outside a window. 26.2's deferred
-	 * submit/collect pipeline runs renderToBuffer long after the window closed,
-	 * so the caller stores the result on the model instance itself.
-	 */
-	public static BodyWindow pollWindow() {
+	/** Called from the BreastRenderCommand constructor; no-op outside a window. */
+	public static void registerCommand(Object command) {
 		Matrix4f view = ACTIVE_VIEW.get();
 		Matrix4f inv = ACTIVE_INV.get();
-		if(view == null || inv == null) {
-			return null;
+		if(view != null && inv != null) {
+			int index = LAYER_INDEX.get();
+			LAYER_INDEX.set(index + 1);
+			BY_COMMAND.put(command, new BodyWindow(view, inv, index, ACTIVE_ROUNDNESS.get(), ACTIVE_CLEAVAGE.get()));
 		}
-		int index = LAYER_INDEX.get();
-		LAYER_INDEX.set(index + 1);
-		return new BodyWindow(view, inv, index, ACTIVE_ROUNDNESS.get(), ACTIVE_CLEAVAGE.get());
+	}
+
+	public static BodyWindow forCommand(Object command) {
+		return BY_COMMAND.get(command);
 	}
 }

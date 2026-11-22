@@ -5,12 +5,12 @@ import com.wildfire.client.render.BreastSide;
 import com.wildfire.client.render.GenderArmorLayer;
 import com.wildfire.client.render.GenderLayer;
 import com.wildfire.client.render.GenderRenderState;
+import io.github.e33epus.fgmplus.FgmPlusClient;
 import io.github.e33epus.fgmplus.render.DebugPlaneCommand;
 import io.github.e33epus.fgmplus.render.RenderCapture;
 import io.github.e33epus.fgmplus.shape.ShapeData;
-import io.github.e33epus.fgmplus.shape.ShapeStateHolder;
+import io.github.e33epus.fgmplus.shape.ShapeRenderState;
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
 import org.joml.Matrix4f;
@@ -30,21 +30,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * positional terms at the vanilla cap level and applies a real scale to
  * the breast model instead, layered with the per-player ShapeData (three-axis
  * scale + perkiness + position offsets). Back overflow is cured by the
- * per-vertex flatten in BreastModelMixin.
+ * per-vertex flatten in BreastModelMixin; the roundness superellipsoid mesh is
+ * emitted there too.
  *
- * <p>Ported to FGM 5 on MC 26.2: setupTransformations now receives the
- * {@link GenderRenderState} directly (no state-table lookup), and the body frame
- * is built by {@code model.root()} + {@code model.body} translateAndRotate calls —
- * replayed into a scratch stack here so the captured view matrix is bit-exact
- * for the geometry the same invocation later submits. GenderArmorLayer enters
- * through the same (super) method, so the zOffset freeze, the fingerprinted
- * translate redirects and the shape scale cover skin, jacket-wear and armor
- * passes alike.</p>
+ * <p>The per-player shape rides on the render state under FgmPlusClient.STATE_KEY
+ * (attached by FgmPlusRenderStateMixin); the 1.21.11 GenderRenderState duck
+ * interface is gone because FGM 5.0.0 final reworked the state attach to a
+ * Fabric RenderStateDataKey, and the state object itself no longer needs a mixin.</p>
+ *
+ * <p>All hooks sit on GenderLayer#setupTransformations / #renderBreast exactly as
+ * in the 1.21.11 port; GenderArmorLayer still reaches them via super, so the
+ * zOffset freeze, the fingerprinted translate redirects and the shape scale cover
+ * skin, jacket-wear and armor passes alike.</p>
  */
 @Mixin(value = GenderLayer.class, remap = false)
-public abstract class GenderLayerMixin<STATE extends HumanoidRenderState, MODEL extends HumanoidModel<STATE>> {
+public abstract class GenderLayerMixin {
 
-	// Vanilla bust-size slider upper bound
+	// Vanilla ClientConfiguration.BUST_SIZE upper bound
 	@Unique private static final float fp$VANILLA_BUST_CAP = 0.8F;
 	// Replaces the retired bustScaleGain/bustScaleMax config keys (same values as their defaults)
 	@Unique private static final float fp$SCALE_GAIN = 1.0F;
@@ -53,9 +55,6 @@ public abstract class GenderLayerMixin<STATE extends HumanoidRenderState, MODEL 
 	// sink that deepens with bust size); freezing it at the vanilla cap level keeps
 	// busts above 0.8 from being pushed further in
 	@Unique private static final float fp$CAP_Z_OFFSET = (1.0F - fp$VANILLA_BUST_CAP) * 0.0625F;
-	// The torso-back clamp plane itself lives in BreastModelMixin (the flatten
-	// happens there); keeping a copy here would be a dead non-private @Unique field,
-	// which the mixin validator rejects at apply time
 	@Unique private static final float fp$DEG_TO_RAD = (float) (Math.PI / 180);
 
 	@Shadow protected float breastSize;
@@ -75,13 +74,13 @@ public abstract class GenderLayerMixin<STATE extends HumanoidRenderState, MODEL 
 	}
 
 	@Inject(method = "setupTransformations", at = @At("HEAD"), require = 1, remap = false)
-	private void fp$capture(STATE state, MODEL model, GenderRenderState genderState, PoseStack matrixStack, BreastSide side, CallbackInfo ci) {
-		fp$shape = null;
+	private void fp$capture(HumanoidRenderState state, HumanoidModel<?> model, GenderRenderState genderState,
+			PoseStack matrixStack, BreastSide side, CallbackInfo ci) {
+		//shape rides on the render state (FgmPlusRenderStateMixin attach); null = no
+		//customize data yet, everything below falls back to vanilla behavior
+		fp$shape = state == null ? null : state.getData(FgmPlusClient.STATE_KEY);
 		fp$bSize = 0.0F;
 		if(genderState != null) {
-			if(genderState instanceof ShapeStateHolder holder) {
-				fp$shape = holder.fgmplus$getShape();
-			}
 			//the physics-driven bust size the render chain itself uses (lerped)
 			fp$bSize = genderState.leftBreastPhysics.getBreastSize();
 		}
@@ -89,27 +88,18 @@ public abstract class GenderLayerMixin<STATE extends HumanoidRenderState, MODEL 
 		//the main positional translate (which reads zOffset) at the vanilla cap level
 		this.zOffset = Math.max(this.zOffset, fp$CAP_Z_OFFSET);
 
-		//Body view = entry pose (the stack is untouched at HEAD) + everything the
-		//method applies before the per-breast transforms: the baby terms and the
-		//root + body translateAndRotate calls. Replaying those calls through a
-		//scratch PoseStack keeps the matrix bit-exact against future ModelPart
-		//internals (rotation order, scale handling) instead of hand-guessing it.
-		//The armor layer enters through the same (super) method with its own
-		//entry pose and the same body transform, so the clamp plane is consistent
-		//for skin, jacket-wear and armor geometry alike.
+		// Replay FGM's torso transforms on a copy of the entry pose. Using ModelPart's
+		// own method preserves its rotation and per-axis scale in the clamp plane.
 		try {
-			PoseStack scratch = new PoseStack();
-			//seed with the entry pose first: the final chain must read
-			//entry * baby * root * body, exactly as the target method builds it
-			scratch.last().pose().mul(matrixStack.last().pose());
+			PoseStack bodyPose = new PoseStack();
+			bodyPose.last().set(matrixStack.last());
 			if(state.isBaby) {
-				scratch.scale(state.ageScale, state.ageScale, state.ageScale);
-				scratch.translate(0.0F, 0.75F, 0.0F);
+				bodyPose.scale(state.ageScale, state.ageScale, state.ageScale);
+				bodyPose.translate(0.0F, 0.75F, 0.0F);
 			}
-			model.root().translateAndRotate(scratch);
-			ModelPart body = model.body;
-			body.translateAndRotate(scratch);
-			Matrix4f view = new Matrix4f(scratch.last().pose());
+			model.root().translateAndRotate(bodyPose);
+			model.body.translateAndRotate(bodyPose);
+			Matrix4f view = bodyPose.last().pose();
 			Matrix4f inv = view.invert(new Matrix4f());
 			float roundness = fp$shape != null ? fp$shape.getRoundness() : 0.0F;
 			boolean cleavage = fp$shape == null || fp$shape.isCleavage();
@@ -131,12 +121,10 @@ public abstract class GenderLayerMixin<STATE extends HumanoidRenderState, MODEL 
 			at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;translate(FFF)V", remap = true))
 	private void fp$redirectTranslate(PoseStack stack, float x, float y, float z) {
 		//the hang shift: translate(0, -0.035 * breastSize, 0); clamp the size term at
-		//its vanilla cap level (breastSize = 0.8 * 1.5 + ... growth past 0.7)
+		//its vanilla cap level (breastSize = 0.8 * 2 - 0.7 = 0.9)
 		if(x == 0.0F && z == 0.0F && y == -0.035F * this.breastSize) {
-			//26.2's setupRender maps the vanilla cap bust size (0.8) to
-			//breastSize = 0.8 exactly (min(0.8*1.5, 0.7) + 0.5*|0.8-0.7|*2);
-			//freezing the hang term there stops it sinking further past the cap
-			stack.translate(x, -0.035F * Math.min(this.breastSize, fp$VANILLA_BUST_CAP), z);
+			float paramCap = fp$VANILLA_BUST_CAP * 2.0F - 0.7F;
+			stack.translate(x, -0.035F * Math.min(this.breastSize, paramCap), z);
 			return;
 		}
 		//the main positional sink: (±offsetX*0.0625, 0.05625 + offsetY*0.0625,
@@ -163,11 +151,13 @@ public abstract class GenderLayerMixin<STATE extends HumanoidRenderState, MODEL 
 	 * replaced FGM's scale call at — so the composite transform is unchanged.
 	 */
 	@Inject(method = "setupTransformations", at = @At("TAIL"), require = 1, remap = false)
-	private void fp$applyShape(STATE state, MODEL model, GenderRenderState genderState, PoseStack matrixStack, BreastSide side, CallbackInfo ci) {
+	private void fp$applyShape(HumanoidRenderState state, HumanoidModel<?> model, GenderRenderState genderState,
+			PoseStack matrixStack, BreastSide side, CallbackInfo ci) {
 		ShapeData shape = fp$shape != null ? fp$shape : new ShapeData();
 		float perk = shape.getPerkiness();
 		if(perk != 0.0F) {
-			matrixStack.mulPose(new Quaternionf().rotationXYZ(perk * fp$DEG_TO_RAD, 0.0F, 0.0F));
+			//26.3 renamed PoseStack#mulPose(Quaternionfc) to rotate(Quaternionfc) (same semantics)
+			matrixStack.rotate(new Quaternionf().rotationXYZ(perk * fp$DEG_TO_RAD, 0.0F, 0.0F));
 		}
 		float s = fp$realScale(fp$bSize);
 		//Each breast box already spans the full half-torso width, so the real-scale
@@ -179,12 +169,14 @@ public abstract class GenderLayerMixin<STATE extends HumanoidRenderState, MODEL 
 	/**
 	 * Diagnostic aid: submits the torso-back plane through the same pipeline the
 	 * breast geometry uses. Runs at TAIL of renderBreast, while the capture window
-	 * of the left breast is still the active one.
+	 * of the left breast is still the active one. (Only the skin path reaches
+	 * renderBreast — GenderArmorLayer overrides the render callback — which is
+	 * exactly what the 1.21.11 port targeted as well.)
 	 */
 	@Inject(method = "renderBreast", at = @At("TAIL"), require = 1, remap = false)
-	private void fp$drawDebugPlane(STATE state, GenderRenderState genderState, PoseStack matrixStack,
-			SubmitNodeCollector queue, int lightCoords, int overlay, BreastSide side, CallbackInfo ci) {
-		if(side != BreastSide.LEFT || !io.github.e33epus.fgmplus.shape.ShapeRenderState.debugPlane) {
+	private void fp$drawDebugPlane(HumanoidRenderState state, GenderRenderState genderState, PoseStack matrixStack,
+			SubmitNodeCollector queue, int lightCoords, int overlayCoords, BreastSide side, CallbackInfo ci) {
+		if(side != BreastSide.LEFT || !ShapeRenderState.debugPlane) {
 			return;
 		}
 		Matrix4f bodyView = RenderCapture.activeView();

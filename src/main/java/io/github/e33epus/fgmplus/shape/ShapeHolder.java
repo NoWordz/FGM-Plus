@@ -1,7 +1,7 @@
 package io.github.e33epus.fgmplus.shape;
 
 /**
- * Duck interface mixed into {@link com.wildfire.common.entities.players.PlayerConfigHolder}.
+ * Duck interface mixed into {@link com.wildfire.main.entitydata.PlayerConfig}.
  */
 public interface ShapeHolder {
 

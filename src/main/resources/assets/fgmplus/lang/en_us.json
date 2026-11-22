@@ -19,6 +19,5 @@
   "fgmplus.studio.roundness_tip": "0% = vanilla box shape, 100% = fully round; morphs every pass (skin, jacket, armor) onto a superellipsoid",
   "fgmplus.studio.cleavage_on": "Cleavage bridge: ON",
   "fgmplus.studio.cleavage_off": "Cleavage bridge: OFF",
-  "fgmplus.studio.cleavage_tip": "Bridges the inner halves toward the torso centerline at high roundness; OFF restores the plain superellipsoid and FGM's own separation slider feel",
-  "fgmplus.studio.entry_tip": "Per-player bust shape studio: three-axis scale, perkiness, offsets, roundness and custom hurt sounds"
+  "fgmplus.studio.cleavage_tip": "Bridges the inner halves toward the torso centerline at high roundness; OFF restores the plain superellipsoid and FGM's own separation slider feel"
 }

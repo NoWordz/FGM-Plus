@@ -1,24 +1,24 @@
 {
-  "required": true,
-  "package": "io.github.e33epus.fgmplus.mixin",
-  "compatibilityLevel": "JAVA_25",
-  "minVersion": "0.8",
-  "injectors": {
-    "defaultRequire": 0
-  },
-  "mixins": [
-    "ConfigRangeMixin",
-    "PlayerConfigMixin",
-    "WildfireSyncServerMixin"
-  ],
-  "client": [
-    "BaseWildfireScreenAccessor",
-    "BreastModelMixin",
-    "GenderLayerMixin",
-    "GenderRenderStateMixin",
-    "PackRepositoryMixin",
-    "WardrobeBrowserScreenMixin",
-    "WildfireHurtSoundMixin",
-    "WildfireSyncClientMixin"
-  ]
+	"required": true,
+	"package": "io.github.e33epus.fgmplus.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"minVersion": "0.8",
+	"injectors": {
+		"defaultRequire": 0
+	},
+	"mixins": [
+		"BreastsMixin",
+		"BreastsPhysicsMixin",
+		"HurtSoundMixin",
+		"WildfireSyncServerMixin"
+	],
+	"client": [
+		"BaseWildfireScreenAccessor",
+		"BreastModelMixin",
+		"FgmPlusRenderStateMixin",
+		"GenderLayerMixin",
+		"PackRepositoryMixin",
+		"WardrobeBrowserScreenMixin",
+		"WildfireSyncClientMixin"
+	]
 }

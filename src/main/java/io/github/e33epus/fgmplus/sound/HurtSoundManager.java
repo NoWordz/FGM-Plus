@@ -1,23 +1,26 @@
 package io.github.e33epus.fgmplus.sound;
 
-import net.minecraft.util.Util;
 import io.github.e33epus.fgmplus.FgmPlusMod;
 import io.github.e33epus.fgmplus.gui.ShapeStudioScreen;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackLocationInfo;
+import net.minecraft.server.packs.PackMetadataResources;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackSelectionConfig;
 import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.metadata.pack.PackFormat;
 import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackSource;
 import net.minecraft.server.packs.resources.IoSupplier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
-import com.wildfire.common.entities.Sounds;
+import com.wildfire.client.ClientHelper;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -38,7 +41,7 @@ import java.util.stream.Stream;
  * Custom female hurt sound support, mirroring FGM's own multi-ogg layout:
  * every *.ogg dropped into config/fgmplus/sounds/ becomes an entry of the
  * single fgmplus:custom_hurt event and SoundEngine picks one at random per
- * play, exactly like wildfire_gender:female_hurt with its oggs. Arbitrary
+ * play, exactly like female_gender:female_hurt with its oggs. Arbitrary
  * file names (Chinese, spaces, upper case) are accepted: the pack exposes
  * them under sanitized index names custom_hurt_0..N-1 mapped to the
  * name-sorted directory listing, and sounds.json is regenerated on every
@@ -48,24 +51,23 @@ import java.util.stream.Stream;
  * SoundEngine#reload (buffer cache), the sounds.json entry map is only rebuilt
  * by the full reload listener pipeline. When the directory holds no ogg at
  * all the pack exposes an empty sounds.json and every path falls back to
- * FGM's own female hurt sound.
+ * FGM's own female hurt sound (ClientHelper#femaleHurt on 5.0.0 — the old
+ * WildfireSounds.FEMALE_HURT constant is gone).
  *
- * <p>Forge 1.20.1 injected the pack through AddPackFinders; on Fabric the pack is
- * inserted into the client PackRepository by {@code PackRepositoryMixin} instead.</p>
+ * <p>The hurt-sound swap seam is HurtSoundMixin (redirect at
+ * AbstractAvatarConfigHolder#tryPlayHurtSound); on Fabric the pack is inserted
+ * into the client PackRepository by {@code PackRepositoryMixin}.</p>
  */
 public final class HurtSoundManager {
 
 	public static final Identifier CUSTOM_HURT_ID =
 			Identifier.fromNamespaceAndPath(FgmPlusMod.MODID, "custom_hurt");
-	// Same unregistered-SoundEvent pattern as FGM's com.wildfire.client.ClientHelper.INSTANCE.femaleHurt().value():
-	// the sound event never enters the registry, resolution goes purely through
-	// the client sounds.json.
+	// FGM unwraps this holder before playing the sound locally by identifier.
 	public static final SoundEvent CUSTOM_HURT = SoundEvent.createVariableRangeEvent(CUSTOM_HURT_ID);
+	private static final Holder<SoundEvent> CUSTOM_HURT_HOLDER = Holder.direct(CUSTOM_HURT);
 
 	public static final String PACK_ID = "fgmplus_hurt_sounds";
-	// Resource pack format for MC 1.21.11 (verified against the client jar's version.json:
-	// pack_version/resource_major = 75)
-	public static final int PACK_FORMAT = 75;
+	private static final PackFormat PACK_FORMAT = SharedConstants.getCurrentVersion().packVersion(PackType.CLIENT_RESOURCES);
 	private static final String SOUNDS_JSON_PATH = "sounds.json";
 	// Pack-internal resource name of indexed ogg entry i (always lowercase, so
 	// even exotic file names on disk stay a valid Identifier path)
@@ -86,10 +88,11 @@ public final class HurtSoundManager {
 
 	private static final byte[] EMPTY_SOUNDS_JSON = "{}".getBytes(StandardCharsets.UTF_8);
 
-	private static final byte[] PACK_MCMETA = ("{\"pack\":{"
-			+ "\"pack_format\":" + PACK_FORMAT + ","
-			+ "\"description\":\"FGM Plus custom hurt sounds\""
-			+ "}}").getBytes(StandardCharsets.UTF_8);
+	private static final byte[] PACK_MCMETA = String.format(Locale.ROOT,
+			"{\"pack\":{\"min_format\":[%d,%d],\"max_format\":[%d,%d],"
+					+ "\"description\":\"FGM Plus custom hurt sounds\"}}",
+			PACK_FORMAT.major(), PACK_FORMAT.minor(), PACK_FORMAT.major(), PACK_FORMAT.minor())
+			.getBytes(StandardCharsets.UTF_8);
 
 	private HurtSoundManager() {
 	}
@@ -108,8 +111,12 @@ public final class HurtSoundManager {
 			//explorer.exe on the plain path is the one open that always works there
 			if (System.getProperty("os.name", "").contains("Windows")) {
 				new ProcessBuilder("explorer.exe", dir.toAbsolutePath().toString()).start();
+			} else if (System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) {
+				//26.3 移除了 Util.getPlatform().openFile()：macOS 用系统 open 命令
+				new ProcessBuilder("open", dir.toAbsolutePath().toString()).start();
 			} else {
-				net.minecraft.util.Util.getPlatform().openFile(dir.toFile());
+				//Linux 等桌面环境走 freedesktop 的 xdg-open
+				new ProcessBuilder("xdg-open", dir.toAbsolutePath().toString()).start();
 			}
 		} catch(Throwable t) {
 			// surfaced at warn: a silent no-op click is undebuggable
@@ -151,7 +158,7 @@ public final class HurtSoundManager {
 			//— too invasive for a preview click. A same-name content swap keeps the
 			//old cached buffer until the user runs F3+T (documented in the UI).
 			testPlay();
-			if(mc.gui != null && mc.gui.screen() instanceof ShapeStudioScreen studio) {
+			if(mc.gui.screen() instanceof ShapeStudioScreen studio) {
 				studio.refreshSoundStatus();
 			}
 			return;
@@ -166,7 +173,7 @@ public final class HurtSoundManager {
 					if(t == null) {
 						lastLoadedFingerprint = fingerprintOf(scanSoundFiles());
 						testPlay();
-						if(mc.gui != null && mc.gui.screen() instanceof ShapeStudioScreen studio) {
+						if(mc.gui.screen() instanceof ShapeStudioScreen studio) {
 							studio.refreshSoundStatus();
 						}
 					} else {
@@ -178,8 +185,8 @@ public final class HurtSoundManager {
 	/**
 	 * Plays the custom hurt sound once at the local player's position using the
 	 * currently loaded entry map. When no ogg is present, falls back to FGM's own
-	 * FEMALE_HURT event (same WildfireSounds + playLocalSound pattern FGM's hurt
-	 * handler uses) so the preview button is never silent.
+	 * female hurt event (ClientHelper#femaleHurt on 5.0.0) so the preview button
+	 * is never silent.
 	 */
 	public static void testPlay() {
 		Minecraft mc = Minecraft.getInstance();
@@ -193,11 +200,22 @@ public final class HurtSoundManager {
 			player.level().playLocalSound(player.getX(), player.getY(), player.getZ(),
 					CUSTOM_HURT, SoundSource.PLAYERS, 1.0F, 1.0F, false);
 		} else {
+			SoundEvent fallback = fallbackHurtSound();
 			player.level().playLocalSound(player.getX(), player.getY(), player.getZ(),
-					com.wildfire.client.ClientHelper.INSTANCE.femaleHurt().value(), SoundSource.PLAYERS, 1.0F, 1.0F, false);
+					fallback, SoundSource.PLAYERS, 1.0F, 1.0F, false);
 		}
 		FgmPlusMod.LOGGER.debug("FGM Plus testPlay: {} ogg file(s) present={}, playing {}",
-				scanSoundFiles().size(), present, present ? CUSTOM_HURT_ID : com.wildfire.client.ClientHelper.INSTANCE.femaleHurt().value().location());
+				scanSoundFiles().size(), present, present ? CUSTOM_HURT_ID : fallbackHurtSound().location());
+	}
+
+	/** FGM's registered female hurt event; errors loudly in the log if absent. */
+	private static SoundEvent fallbackHurtSound() {
+		try {
+			return ClientHelper.INSTANCE.femaleHurt().value();
+		} catch(Exception e) {
+			FgmPlusMod.LOGGER.warn("FGM Plus: FGM's female hurt sound is not available", e);
+			return CUSTOM_HURT;
+		}
 	}
 
 	public static Component getStatusText() {
@@ -227,31 +245,25 @@ public final class HurtSoundManager {
 	}
 
 	// ------------------------------------------------------------------
-	// Redirect target used by WildfireHurtSoundMixin
+	// Redirect target used by HurtSoundMixin
 	// ------------------------------------------------------------------
 
 	/**
-	 * Returns CUSTOM_HURT only when at least one user-provided ogg exists AND
-	 * the entry map actually contains it (the map is only rebuilt by a full
-	 * resource reload, so files dropped while the game is running would
-	 * otherwise swap out the original sound for an unresolvable event: no
-	 * sound at all on hurt, not even FGM's default — matching the preview
-	 * path's fallback keeps both paths consistent). Null passthrough for
+	 * Returns the custom sound holder only when at least one
+	 * user-provided ogg exists AND the entry map actually contains it (the map is
+	 * only rebuilt by a full resource reload, so files dropped while the game is
+	 * running would otherwise swap out the original sound for an unresolvable
+	 * event: no sound at all on hurt, not even FGM's default — matching the
+	 * preview path's fallback keeps both paths consistent). Null passthrough for
 	 * non-FEMALE genders is preserved so FGM's own null-check keeps working.
 	 */
-	/**
-	 * Holder-returning variant used by WildfireHurtSoundMixin: 26.2's
-	 * tryPlayHurtSound resolves through ClientHelper#hurtSound which hands back
-	 * a Holder, so the swap wraps CUSTOM_HURT in a direct Holder (the event is
-	 * never registry-entry; resolution goes through the client sounds.json).
-	 */
-	public static net.minecraft.core.Holder<SoundEvent> resolveHurtSound(net.minecraft.core.Holder<SoundEvent> original) {
+	public static Holder<SoundEvent> resolveHurtSound(Holder<SoundEvent> original) {
 		if(original == null || !hasCustomSounds()) {
 			return original;
 		}
 		Minecraft mc = Minecraft.getInstance();
 		return mc != null && mc.getSoundManager().getSoundEvent(CUSTOM_HURT_ID) != null
-				? net.minecraft.core.Holder.direct(CUSTOM_HURT) : original;
+				? CUSTOM_HURT_HOLDER : original;
 	}
 
 	// ------------------------------------------------------------------
@@ -344,16 +356,16 @@ public final class HurtSoundManager {
 				Component.literal("FGM Plus Custom Hurt Sounds"),
 				PackSource.BUILT_IN,
 				java.util.Optional.empty());
-		//ResourcesSupplier has two abstract methods (primary + full), hence the anonymous class
+		//26.3 的 ResourcesSupplier 合并为 openMetadata + openResources(Stream) 两个抽象方法
 		Pack.ResourcesSupplier supplier = new Pack.ResourcesSupplier() {
 			@Override
-			public PackResources openPrimary(PackLocationInfo info) {
+			public PackMetadataResources openMetadata(PackLocationInfo info) {
 				return new HurtSoundPack(info);
 			}
 
 			@Override
-			public PackResources openFull(PackLocationInfo info, Pack.Metadata metadata) {
-				return new HurtSoundPack(info);
+			public Stream<PackResources> openResources(PackLocationInfo info, Pack.Metadata metadata) {
+				return Stream.of(new HurtSoundPack(info));
 			}
 		};
 		return Pack.readMetaAndCreate(
@@ -434,11 +446,9 @@ public final class HurtSoundManager {
 		@Override
 		public <T> T getMetadataSection(net.minecraft.server.packs.metadata.MetadataSectionType<T> serializer) throws java.io.IOException {
 			if(serializer == net.minecraft.server.packs.metadata.pack.PackMetadataSection.CLIENT_TYPE) {
-				net.minecraft.server.packs.metadata.pack.PackFormat format =
-						net.minecraft.server.packs.metadata.pack.PackFormat.of(PACK_FORMAT);
 				return (T) new net.minecraft.server.packs.metadata.pack.PackMetadataSection(
 						Component.literal("FGM Plus custom hurt sounds"),
-						new net.minecraft.util.InclusiveRange<>(format, format));
+						new net.minecraft.util.InclusiveRange<>(PACK_FORMAT, PACK_FORMAT));
 			}
 			return null;
 		}

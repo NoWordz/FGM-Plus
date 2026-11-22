@@ -1,26 +1,42 @@
 {
-  "schemaVersion": 1,
-  "id": "fgmplus",
-  "version": "${version}",
-  "name": "FGM Plus",
-  "description": "为 Wildfire's Female Gender Mod 增加逐玩家胸部造型、真实缩放、圆润网格、防穿模和自定义受伤音效。",
-  "authors": ["E33EPUS"],
-  "contact": {
-    "homepage": "https://github.com/NoWordz/FGM-Plus",
-    "sources": "https://github.com/NoWordz/FGM-Plus"
-  },
-  "license": "GPLv3",
-  "environment": "*",
-  "entrypoints": {
-    "main": ["io.github.e33epus.fgmplus.FgmPlusMod"],
-    "client": ["io.github.e33epus.fgmplus.FgmPlusClient"]
-  },
-  "mixins": ["fgmplus.mixins.json"],
-  "depends": {
-    "fabricloader": ">=0.18.4",
-    "minecraft": ">=26.2 <26.3",
-    "java": ">=25",
-    "fabric-api": "*",
-    "female_gender_mod": "*"
-  }
+	"schemaVersion": 1,
+	"id": "fgmplus",
+	"version": "${version}",
+	"name": "FGM-Plus-26.3-fabric",
+	"description": "Real per-player bust shaping for Wildfire's Female Gender Mod: perkiness, per-axis scaling with anti-clip back flattening, and custom hurt sounds. Based on Female Plastic Surgery by Rinko1231 (GPLv3).",
+	"authors": [
+		"E33EPUS"
+	],
+	"contact": {
+		"homepage": "https://github.com/NoWordz/FGM-Plus",
+		"sources": "https://github.com/NoWordz/FGM-Plus",
+		"issues": "https://github.com/NoWordz/FGM-Plus/issues"
+	},
+	"license": "GPLv3",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.e33epus.fgmplus.FgmPlusMod"
+		],
+		"client": [
+			"io.github.e33epus.fgmplus.FgmPlusClient"
+		]
+	},
+	"mixins": [
+		"fgmplus.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "${minecraft_dependency}",
+		"java": ">=25",
+		"fabric-api": "*",
+		"female_gender_mod": ">=5.0.0"
+	},
+	"custom": {
+		"modmenu": {
+			"links": {
+				"modmenu.discord": "https://discord.gg/wildfiregender"
+			}
+		}
+	}
 }

@@ -2,8 +2,8 @@ package io.github.e33epus.fgmplus.mixin;
 
 import com.wildfire.client.gui.WildfireButton;
 import com.wildfire.client.gui.screen.WardrobeBrowserScreen;
-import com.wildfire.common.entities.players.PlayerConfigHolder;
 import io.github.e33epus.fgmplus.gui.ShapeStudioScreen;
+import com.wildfire.common.entities.players.PlayerConfigHolder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
@@ -13,10 +13,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Adds the Shape Studio entry button to the FGM 5 (26.2) wardrobe browser,
- * directly below the appearance-settings button in the same 157px column. The
- * studio edits per-player shapes only, so the button is skipped for mannequin
- * configs (the wardrobe can open either through the synced-player list).
+ * Adds the Shape Studio entry button to the FGM 5 wardrobe browser, directly
+ * below the appearance-settings button in the same 157px column (the layout of
+ * WardrobeBrowserScreen#init is unchanged from the 1.21.11 port: the appearance
+ * button sits at height/2 - 63, leaving the band below it free).
  */
 @Mixin(value = WardrobeBrowserScreen.class, remap = false)
 public abstract class WardrobeBrowserScreenMixin extends Screen {
@@ -27,8 +27,7 @@ public abstract class WardrobeBrowserScreenMixin extends Screen {
 
 	@Inject(method = "init", at = @At("TAIL"), require = 1, remap = false)
 	private void fp$addShapeStudioButton(CallbackInfo ci) {
-		//'this' is the merged WardrobeBrowserScreen instance at runtime; the
-		//displayed avatar's config reaches the studio through the field accessor
+		// Shape Studio stores and renders shapes only for players.
 		if(!(((BaseWildfireScreenAccessor) this).fgmplus$getConfig() instanceof PlayerConfigHolder player)) {
 			return;
 		}
@@ -36,12 +35,8 @@ public abstract class WardrobeBrowserScreenMixin extends Screen {
 				.message(() -> Component.translatable("fgmplus.studio.entry"))
 				.position(this.width / 2 - 36, this.height / 2 - 41)
 				.size(157, 20)
-				.tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.translatable("fgmplus.studio.entry_tip")))
 				.onPress(button -> this.minecraft.gui.setScreen(new ShapeStudioScreen(
 						Component.translatable("fgmplus.studio.title"), this, player)))
-				//BaseWildfireScreen#addButton stamps its own open-time guard; a bare
-				//Builder just needs any sane timestamp — anti-double-click only
-				//suppresses presses inside the first 200ms, same as FGM's own widgets
 				.build(Util.getMillis()));
 	}
 }
