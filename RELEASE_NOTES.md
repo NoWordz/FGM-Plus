@@ -1,33 +1,5 @@
 # Release Notes
 
-## v1.8.0
-
-**新增**
-
-- 支持 Minecraft 26.3 Fabric，搭配 FGM 5.0.0、Fabric API 和 Fabric Loader 0.19.5 或更新版本。
-
-**修复**
-
-- 修正 Fabric 26.3 客户端发送自定义造型的时机。
-
-**说明**
-
-- 感谢 XyOfficial977 提交 Fabric 26.3 适配方案。[PR #2](https://github.com/NoWordz/FGM-Plus/pull/2)
-
-----
-
-**Added**
-
-- Added support for Minecraft 26.3 on Fabric with FGM 5.0.0, Fabric API and Fabric Loader 0.19.5 or later.
-
-**Fixed**
-
-- Fixed the timing of custom shape synchronization on Fabric 26.3.
-
-**Notes**
-
-- Thanks to XyOfficial977 for contributing the Fabric 26.3 port. [PR #2](https://github.com/NoWordz/FGM-Plus/pull/2)
-
 ## v1.7.0
 
 **新增**
@@ -43,7 +15,14 @@
 - Fabric 26.2 同时使用 Iris、Photon 和 3D Skin Layers 时，若看到黑块，请开启 3D Skin Layers 的 Iris 兼容模式。
 - 感谢 XyOfficial977 提交 Fabric 26.2 移植方案。[PR #1](https://github.com/NoWordz/FGM-Plus/pull/1)
 
+**Fabric 26.3 补发**
+
+- 支持 Minecraft 26.3 Fabric，搭配 FGM 5.0.0、Fabric API 和 Fabric Loader 0.19.5 或更新版本。
+- 修正 Fabric 26.3 客户端发送自定义造型的时机。
+- 感谢 XyOfficial977 提交 Fabric 26.3 适配方案。[PR #2](https://github.com/NoWordz/FGM-Plus/pull/2)
+
 ----
+
 
 **Added**
 
@@ -57,3 +36,9 @@
 
 - If you see black patches with Iris, Photon and 3D Skin Layers on Fabric 26.2, enable Iris Compatibility Mode in 3D Skin Layers.
 - Thanks to XyOfficial977 for contributing the Fabric 26.2 port. [PR #1](https://github.com/NoWordz/FGM-Plus/pull/1)
+
+**Fabric 26.3 addition**
+
+- Added support for Minecraft 26.3 on Fabric with FGM 5.0.0, Fabric API and Fabric Loader 0.19.5 or later.
+- Fixed the timing of custom shape synchronization on Fabric 26.3.
+- Thanks to XyOfficial977 for contributing the Fabric 26.3 port. [PR #2](https://github.com/NoWordz/FGM-Plus/pull/2)

@@ -37,6 +37,12 @@ propsFile.withInputStream { repoProps.load(it) }
 ext.maven_group = repoProps.getProperty('mod_group_id')   // Fabric 侧一直叫 maven_group
 ext.fgmplusRepoRoot = repoRoot
 
+// Prefix the archive filename version while keeping the mod's runtime version numeric.
+def jarVersion = 'v' + ext.mod_version
+tasks.withType(AbstractArchiveTask).configureEach {
+    archiveVersion.set(jarVersion)
+}
+
 // ---- 2. 本目标是哪一个 ----
 def targetsFile = new File(repoRoot, 'versions/targets.json')
 def layersFile = new File(repoRoot, 'versions/layers.json')

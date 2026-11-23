@@ -64,7 +64,7 @@ cd platforms/26.2-fabric
 ./gradlew build     # Windows PowerShell uses .\gradlew.bat build
 ```
 
-On Windows with Git Bash, run `bash tools/build_all.sh` from the repository root to build the full matrix. `bash tools/collect_jars.sh` collects the JARs into `dist/<version>/`.
+On Windows with Git Bash, run `bash tools/build_all.sh` from the repository root to build the full matrix. `bash tools/collect_jars.sh` collects the JARs into `dist/<version>/`. Build outputs follow `fgmplus-<loader>-<minecraft>-v<release>.jar`.
 
 ## Credits
 

@@ -17,15 +17,16 @@ BUILDABLE=$(python tools/verify_targets.py --list-buildable | tr -d '\r')
 copied=0
 while IFS= read -r project; do
     [ -z "$project" ] && continue
-    for jar in "$ROOT/$project"/build/libs/*.jar; do
-        [ -e "$jar" ] || continue
-        case "$jar" in
-            *-sources.jar|*-javadoc.jar) continue ;;
-        esac
-        cp -f "$jar" "$DEST/"
-        echo "collected $(basename "$jar")"
-        copied=$((copied+1))
-    done
+    archive_base=$(grep -E '^archives_base_name=' "$ROOT/$project/gradle.properties" | cut -d= -f2 | tr -d '\r')
+    jar_name="$archive_base-v$MOD_VERSION.jar"
+    jar="$ROOT/$project/build/libs/$jar_name"
+    if [ ! -f "$jar" ]; then
+        echo "Missing build output $project/build/libs/$jar_name" >&2
+        exit 1
+    fi
+    cp -f "$jar" "$DEST/"
+    echo "collected $jar_name"
+    copied=$((copied+1))
 done <<< "$BUILDABLE"
 
 echo "dist/$MOD_VERSION: $copied jar(s)"

@@ -1,35 +1,5 @@
 # Changelog
 
-## v1.8.0
-
-**新增**
-
-- 支持 Minecraft 26.3 Fabric，搭配 FGM 5.0.0、Fabric API 和 Fabric Loader 0.19.5 或更新版本。
-- 为 26.3 适配姿态旋转和资源包接口，保留圆度、造型工作室与自定义受伤音效。
-
-**修复**
-
-- Fabric 26.3 在 FGM 成功发送玩家配置后同步自定义造型。
-
-**说明**
-
-- 感谢 XyOfficial977 提交 Fabric 26.3 适配方案。[PR #2](https://github.com/NoWordz/FGM-Plus/pull/2)
-
-----
-
-**Added**
-
-- Added support for Minecraft 26.3 on Fabric with FGM 5.0.0, Fabric API and Fabric Loader 0.19.5 or later.
-- Updated pose rotation and resource-pack integration for 26.3, preserving roundness, Shape Studio and custom hurt sounds.
-
-**Fixed**
-
-- On Fabric 26.3, send custom shape data after FGM successfully sends the player's settings.
-
-**Notes**
-
-- Thanks to XyOfficial977 for contributing the Fabric 26.3 port. [PR #2](https://github.com/NoWordz/FGM-Plus/pull/2)
-
 ## v1.7.0
 
 **新增**
@@ -47,7 +17,15 @@
 - 在 Fabric 26.2 上同时使用 Iris、Photon 和 3D Skin Layers 时，如果圆形模型出现黑块，在 3D Skin Layers 中开启 Iris 兼容模式。
 - 感谢 XyOfficial977 提交 Fabric 26.2 移植方案。[PR #1](https://github.com/NoWordz/FGM-Plus/pull/1)
 
+**Fabric 26.3 补发**
+
+- 支持 Minecraft 26.3 Fabric，搭配 FGM 5.0.0、Fabric API 和 Fabric Loader 0.19.5 或更新版本。
+- 为 26.3 适配姿态旋转和资源包接口，保留圆度、造型工作室与自定义受伤音效。
+- Fabric 26.3 在 FGM 成功发送玩家配置后同步自定义造型。
+- 感谢 XyOfficial977 提交 Fabric 26.3 适配方案。[PR #2](https://github.com/NoWordz/FGM-Plus/pull/2)
+
 ----
+
 
 **Added**
 
@@ -63,6 +41,13 @@
 
 - On Fabric 26.2, enable Iris Compatibility Mode in 3D Skin Layers if rounded models show black patches with Iris and Photon.
 - Thanks to XyOfficial977 for contributing the Fabric 26.2 port. [PR #1](https://github.com/NoWordz/FGM-Plus/pull/1)
+
+**Fabric 26.3 addition**
+
+- Added support for Minecraft 26.3 on Fabric with FGM 5.0.0, Fabric API and Fabric Loader 0.19.5 or later.
+- Updated pose rotation and resource-pack integration for 26.3, preserving roundness, Shape Studio and custom hurt sounds.
+- On Fabric 26.3, send custom shape data after FGM successfully sends the player's settings.
+- Thanks to XyOfficial977 for contributing the Fabric 26.3 port. [PR #2](https://github.com/NoWordz/FGM-Plus/pull/2)
 
 ## v1.6.0
 

@@ -71,7 +71,7 @@ jar {
                 'Specification-Vendor'  : project.mod_authors,
                 'Specification-Version' : '1',
                 'Implementation-Title'  : project.name,
-                'Implementation-Version': project.jar.archiveVersion,
+                'Implementation-Version': project.mod_version,
                 'Implementation-Vendor' : project.mod_authors,
                 //belt-and-suspenders next to the [[mixins]] table in neoforge.mods.toml
                 'MixinConfigs'          : 'fgmplus.mixins.json'
