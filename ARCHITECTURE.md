@@ -18,6 +18,7 @@ platforms/
   1.21.1-neoforge/       ModDevGradle 2 / Gradle 9.2 / Java 21 / 官方 mappings（FGM 3.2.2）
   26.1-fabric/          Loom 1.17 / Gradle 9.7 / Java 25 / 无需映射（FGM 5.0.0）
   26.2-fabric/          Loom 1.17 / Gradle 9.7 / Java 25 / 无需映射（FGM 5.0.0）
+  26.3-fabric/          Loom 1.17 / Gradle 9.7 / Java 25 / 无需映射（FGM 5.0.0）
 gradle/fgmplus-layers.gradle   挂载脚本：读根身份，按 targets.json 把 shared+层接进源集
 tools/
   verify_targets.py      守卫闸（本地与 CI 同一份；--list-buildable 供脚本消费）
@@ -63,7 +64,7 @@ python tools/verify_targets.py --matrix-out _matrix.json
   / 包尾追加同步），Fabric 1.21.11 端对 **FGM 5.0-beta**（`PlayerConfig` /
   `BreastRenderCommand` 提交式渲染 / 独立 `fgmplus:shape_sync` payload），
   1.21.1 双端对 **FGM 3.2.x**（3.1 血统的即时渲染线，mixin 集按 NeoForge / Fabric
-  API 各自适配）。Fabric 26.1 和 26.2 使用 **FGM 5.0.0 正式版**，通过
+  API 各自适配）。Fabric 26.1、26.2 和 26.3 使用 **FGM 5.0.0 正式版**，通过
   `BreastModel` 渲染挂钩应用造型。形状数据在各平台共享。
 - 版本号：全平台同一个 `mod_version`。上游 FGM 大版本升级（如 5.0 出正式版）
   通常要重验对应平台的 mixin，届时 bump `mod_version`。

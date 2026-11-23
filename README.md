@@ -21,6 +21,7 @@ FGM Plus expands **[Wildfire's Female Gender Mod](https://modrinth.com/mod/femal
 
 | Minecraft | Loader | FGM version used for the build | Java |
 | --- | --- | --- | --- |
+| 26.3 | Fabric 0.19.5+ | 5.0.0+mc26.3-fabric | 25 |
 | 26.2 | Fabric | 5.0.0+mc26.2-fabric | 25 |
 | 26.1–26.1.2 | Fabric | 5.0.0+mc26.1-fabric | 25 |
 | 1.21.11 | Fabric | 5.0.0-Beta.3+1.21.11 | 21 |
@@ -69,6 +70,7 @@ On Windows with Git Bash, run `bash tools/build_all.sh` from the repository root
 
 - FGM Plus builds on [Wildfire's Female Gender Mod](https://modrinth.com/mod/female-gender) and forks [Female Plastic Surgery](https://github.com/Rinko1231/Female-Plastic-Surgery-for-WFG) by Rinko1231.
 - Thanks to [XyOfficial977](https://github.com/XyOfficial977) for the [Fabric 26.2 port PR](https://github.com/NoWordz/FGM-Plus/pull/1), which contributed the torso transform, player-only Shape Studio entry and client-local hurt sound fixes.
+- XyOfficial977 also contributed the Fabric 26.3 pose rotation and resource-pack API updates. [Fabric 26.3 port PR](https://github.com/NoWordz/FGM-Plus/pull/2)
 
 ## License
 

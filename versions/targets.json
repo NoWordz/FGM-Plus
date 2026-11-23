@@ -89,5 +89,19 @@
     "upstream": "maven.modrinth:female-gender:5.0.0+mc26.2-fabric",
     "note": "targets FGM 5.0.0 final; unobfuscated MC, loom 1.17 no mappings; api version from FGM stonecutter.properties.toml 26.2 section",
     "unverified": []
+  },
+  "26.3-fabric": {
+    "minecraft": "26.3",
+    "loader": "fabric",
+    "loader_version": "0.19.5",
+    "mappings": "none",
+    "java": 25,
+    "gradle": "9.7.1",
+    "project": "platforms/26.3-fabric",
+    "buildable": true,
+    "layers": [],
+    "upstream": "maven.modrinth:female-gender:5.0.0+mc26.3-fabric",
+    "note": "targets FGM 5.0.0 final and the Fabric 26.3 client APIs",
+    "unverified": []
   }
 }
