@@ -52,6 +52,9 @@ public abstract class BreastModelMixin {
 	@Unique private static final float fp$CLAMP_BACK_Z = 2.125F * 0.0625F;
 	@Unique private static final float fp$LAYER_EPSILON = 0.003F;
 
+	//render-thread-only scratch reused across mesh emission calls (single model per call)
+	@Unique private final Vector4f[] fp$quadPositions = new Vector4f[4];
+	@Unique private final float[] fp$quadBodyZ = new float[4];
 	@Unique private static long fp$lastPullLogMs;
 
 	//Iris shadow-pass probe via reflection: Iris is optional at runtime (no Iris = no
@@ -122,54 +125,66 @@ public abstract class BreastModelMixin {
 		//and scale-consistent: p' = p + (0,0,Δ) maps back to q' = q + R·(0,0,Δ)
 		Vector3f pullDir = window.view().transformDirection(new Vector3f(0.0F, 0.0F, 1.0F));
 		float roundness = window.roundness();
-		if(roundness > 0.0F) {
-			FgmPlusConfig.maybeReload();
-		}
+		//In Iris's shadow pass the roundness mesh degrades to the flat box: shader packs
+		//tune their shadow-map normal bias for planar depth gradients, and a curved
+		//entity surface self-shadows with acne no bias compensates. The shadow silhouette
+		//barely changes; the lit chest stops eating itself.
 		boolean flatForShadow = FgmPlusConfig.meshShadowFlat && fp$isShadowPass();
 		if(roundness > 0.0F && !flatForShadow) {
+			//Shape Studio roundness: emit the superellipsoid mesh instead of the flat
+			//box quads. The back-flatten clamp applies per quad by default (meshPullMode):
+			//Iris recomputes every entity quad's face normal from its vertex positions,
+			//so a per-vertex pull stretches curved quads and the recomputed normals
+			//rotate away from the surface. "per_vertex" restores the legacy behavior;
+			//"off" disables the pull entirely (diagnosis only).
 			RoundBreastMesh mesh = RoundBreastMesh.of(this.model, roundness,
 					window.cleavage() && !FgmPlusConfig.meshDebugNoBridge);
+			//debug-loop: pick up config file edits without a game restart (1s throttle)
+			FgmPlusConfig.maybeReload();
 			float[] d = mesh.data;
+			//diagnostic count sweep: -1 = all quads
 			int quadLimit = FgmPlusConfig.meshDebugMaxQuads < 0 ? mesh.quadCount
 					: Math.min(mesh.quadCount, FgmPlusConfig.meshDebugMaxQuads);
 			String pullMode = FgmPlusConfig.meshPullMode;
-			boolean continuous = "continuous".equals(pullMode);
-			boolean clampVertices = "per_vertex".equals(pullMode);
-			RoundBreastMesh.DepthFit fit = continuous
-					? mesh.fitBackPlane(pose, window.view(), window.inv(), planeZ) : null;
-			Matrix4f meshPose = fit == null ? pose : fit.pose();
-			Matrix3f meshNormals = fit == null ? normalMat : meshPose.normal(new Matrix3f());
-			int pulledQuads = fit == null ? 0 : quadLimit;
-			float maxPullDepth = fit == null ? 0.0F : fit.maxPull();
-			Vector4f viewPos = new Vector4f();
-			Vector3f bodyPos = new Vector3f();
-			Vector3f normal = new Vector3f();
+			boolean rigidPull = !"per_vertex".equals(pullMode);
+			boolean disablePull = "off".equals(pullMode);
+			int pulledQuads = 0;
+			float maxPullDepth = 0.0F;
+			Vector4f[] quadPos = fp$quadPositions;
+			float[] quadBodyZ = fp$quadBodyZ;
 			for(int quad = 0; quad < quadLimit; quad++) {
-				boolean pulled = false;
+				float deepestBodyZ = Float.NEGATIVE_INFINITY;
 				for(int v = 0; v < 4; v++) {
 					int o = quad * 32 + v * 8;
-					viewPos.set(d[o], d[o + 1], d[o + 2], 1.0F).mul(meshPose);
-					if(clampVertices) {
-						float depth = window.inv().transformPosition(
-								bodyPos.set(viewPos.x(), viewPos.y(), viewPos.z())).z() - planeZ;
-						if(depth > 0.0F) {
-							viewPos.x -= pullDir.x * depth;
-							viewPos.y -= pullDir.y * depth;
-							viewPos.z -= pullDir.z * depth;
-							pulled = true;
-							maxPullDepth = Math.max(maxPullDepth, depth);
-						}
+					Vector4f viewPos = quadPos[v] == null ? quadPos[v] = new Vector4f() : quadPos[v];
+					viewPos.set(d[o], d[o + 1], d[o + 2], 1.0F).mul(pose);
+					float bodyZ = window.inv().transformPosition(
+							new Vector3f(viewPos.x(), viewPos.y(), viewPos.z())).z();
+					quadBodyZ[v] = bodyZ;
+					if(bodyZ > deepestBodyZ) {
+						deepestBodyZ = bodyZ;
 					}
-					normal.set(d[o + 3], d[o + 4], d[o + 5]).mul(meshNormals);
-					if(continuous) {
-						normal.normalize();
+				}
+				float quadDepth = disablePull ? 0.0F : Math.max(deepestBodyZ - planeZ, 0.0F);
+				if(quadDepth > 0.0F) {
+					pulledQuads++;
+					if(quadDepth > maxPullDepth) {
+						maxPullDepth = quadDepth;
 					}
+				}
+				for(int v = 0; v < 4; v++) {
+					int o = quad * 32 + v * 8;
+					Vector4f viewPos = quadPos[v];
+					float depth = rigidPull ? quadDepth : Math.max(quadBodyZ[v] - planeZ, 0.0F);
+					if(depth > 0.0F) {
+						viewPos.x -= pullDir.x * depth;
+						viewPos.y -= pullDir.y * depth;
+						viewPos.z -= pullDir.z * depth;
+					}
+					Vector3f normal = new Vector3f(d[o + 3], d[o + 4], d[o + 5]).mul(normalMat);
 					vertexConsumer.addVertex(viewPos.x(), viewPos.y(), viewPos.z(), color,
 							d[o + 6], d[o + 7], overlay, light,
 							normal.x(), normal.y(), normal.z());
-				}
-				if(pulled) {
-					pulledQuads++;
 				}
 			}
 			fp$pullStats(quadLimit, pulledQuads, maxPullDepth, roundness, window.layerIndex());

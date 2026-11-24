@@ -34,6 +34,10 @@ public class FgmPlusClient implements ClientModInitializer {
 		//scans the same directory (HurtSoundManager preview fast path)
 		HurtSoundManager.seedFingerprint();
 
+		//same unregistered-event -> holder registration pattern as FGM's own
+		//FabricClientHelper.registerSounds (female_hurt)
+		HurtSoundManager.registerSound();
+
 		ClientPlayConnectionEvents.INIT.register((handler, client) ->
 				ClientPlayNetworking.registerReceiver(ShapeSyncPayload.ID, (payload, context) -> {
 					// the server never sends our own shape back to us, but guard anyway

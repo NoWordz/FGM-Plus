@@ -3,8 +3,6 @@ package io.github.e33epus.fgmplus.render;
 import com.wildfire.client.render.WildfireModelRenderer;
 import io.github.e33epus.fgmplus.FgmPlusMod;
 import io.github.e33epus.fgmplus.config.FgmPlusConfig;
-import org.joml.Matrix4f;
-import org.joml.Matrix4fc;
 
 import java.util.Collections;
 import java.util.Map;
@@ -50,7 +48,6 @@ public final class RoundBreastMesh {
 	//the torso centerline and interpenetrate slightly, so the void between the
 	//rounds closes into a crease the clothes texture spans.
 	private static final float CLEAVAGE_BRIDGE = 0.75F;
-	private static final float UV_CELL_INSET = 0.25F;
 
 	//box instance -> roundness -> mesh. Boxes are SHARED across players with the same
 	//UV layout (GenderLayer keeps them as layer fields), and roundness is per player, so
@@ -66,48 +63,17 @@ public final class RoundBreastMesh {
 		this.roundness = roundness;
 	}
 
-	public record DepthFit(Matrix4f pose, float maxPull) {}
-
-	/**
-	 * Fits the curved mesh against the back plane with a single affine transform.
-	 * Shared edges stay joined, and the front stays in place when there is room to fit.
-	 * Returns null when the mesh already fits.
-	 */
-	public DepthFit fitBackPlane(Matrix4fc pose, Matrix4fc bodyView, Matrix4fc bodyInverse, float planeZ) {
-		Matrix4f modelToBody = bodyInverse.mul(pose, new Matrix4f());
-		float minZ = Float.POSITIVE_INFINITY;
-		float maxZ = Float.NEGATIVE_INFINITY;
-		for(int i = 0; i < data.length; i += 8) {
-			float z = modelToBody.m02() * data[i] + modelToBody.m12() * data[i + 1]
-					+ modelToBody.m22() * data[i + 2] + modelToBody.m32();
-			minZ = Math.min(minZ, z);
-			maxZ = Math.max(maxZ, z);
-		}
-		if(!(maxZ > planeZ)) {
-			return null;
-		}
-		// If the front is close to the plane, shift the remaining overflow forward
-		// rather than crushing the mesh to a plane and making its normals singular.
-		float depth = maxZ - minZ;
-		float scaleZ = depth > 0.0F ? Math.max(0.5F, (planeZ - minZ) / depth) : 1.0F;
-		Matrix4f fitInBody = new Matrix4f().translation(0.0F, 0.0F, planeZ - maxZ * scaleZ)
-				.scale(1.0F, 1.0F, scaleZ).mul(modelToBody);
-		return new DepthFit(bodyView.mul(fitInBody, new Matrix4f()), maxZ - planeZ);
-	}
-
 	/**
 	 * Cached mesh of {@code box} at {@code roundness}; never null for roundness > 0.
 	 * {@code bridged} toggles the cleavage bridge; it rides in the cache key's
 	 * integer part (roundness stays below 1, the off-state adds 10).
 	 */
 	public static RoundBreastMesh of(WildfireModelRenderer.ModelBox box, float roundness, boolean bridged) {
-		// Include the UV mode so changing it during a debug reload takes effect.
-		boolean fullUv = FgmPlusConfig.meshDebugFullUv;
-		boolean insetUv = !fullUv && FgmPlusConfig.meshTexelCenterUv;
+		//diagnostic modes ride in the cache key so toggling them never serves a stale
+		//mesh (key space: bridged flag <10, noMorph +20, fullUv +40)
 		float key = (bridged ? roundness : 10.0F + roundness);
 		if(FgmPlusConfig.meshDebugNoMorph) key += 20.0F;
-		if(fullUv) key += 40.0F;
-		if(insetUv) key += 80.0F;
+		if(FgmPlusConfig.meshDebugFullUv) key += 40.0F;
 		Map<Float, RoundBreastMesh> slots = CACHE.computeIfAbsent(box, k -> new java.util.HashMap<>());
 		synchronized(slots) {
 			if(slots.size() > 8) {
@@ -115,7 +81,7 @@ public final class RoundBreastMesh {
 			}
 			RoundBreastMesh mesh = slots.get(key);
 			if(mesh == null) {
-				mesh = build(box, roundness, bridged, fullUv, insetUv);
+				mesh = build(box, roundness, bridged);
 				slots.put(key, mesh);
 				//cache-miss only; the first-line observability for
 				//"the roundness slider does nothing" reports
@@ -125,8 +91,7 @@ public final class RoundBreastMesh {
 		}
 	}
 
-	private static RoundBreastMesh build(WildfireModelRenderer.ModelBox box, float roundness, boolean bridged,
-			boolean fullUv, boolean insetUv) {
+	private static RoundBreastMesh build(WildfireModelRenderer.ModelBox box, float roundness, boolean bridged) {
 		//exponent for the box->sphere continuum: roundness 1 -> n=2 (sphere);
 		//clamped away from 0 so callers can pass small values without pow blowups
 		float r = Math.max(roundness, 0.01F);
@@ -172,6 +137,7 @@ public final class RoundBreastMesh {
 		}
 		float[] out = new float[totalQuads * 4 * 8];
 		int quad = 0;
+		boolean fullUv = FgmPlusConfig.meshDebugFullUv; //diagnostic: per-sub-quad full-face UVs
 		for(WildfireModelRenderer.TexturedQuad src : box.quads) {
 			if(src == null || isDegenerate(src)) continue;
 			WildfireModelRenderer.PositionTextureVertex[] c = src.vertexPositions;
@@ -183,6 +149,18 @@ public final class RoundBreastMesh {
 			float ex = c[3].x(), ey = c[3].y(), ez = c[3].z();
 			int segS = segments(Math.abs(bx - ax) + Math.abs(by - ay) + Math.abs(bz - az));
 			int segT = segments(Math.abs(ex - ax) + Math.abs(ey - ay) + Math.abs(ez - az));
+			//atlas texel size derived from the source quad's pixel rect vs normalized
+			//corner UVs (works for HD skins of any resolution)
+			float uMin = Math.min(Math.min(c[0].u(), c[1].u()), Math.min(c[2].u(), c[3].u()));
+			float uMax = Math.max(Math.max(c[0].u(), c[1].u()), Math.max(c[2].u(), c[3].u()));
+			float vMin = Math.min(Math.min(c[0].v(), c[1].v()), Math.min(c[2].v(), c[3].v()));
+			float vMax = Math.max(Math.max(c[0].v(), c[1].v()), Math.max(c[2].v(), c[3].v()));
+			float uSpan = uMax - uMin;
+			float vSpan = vMax - vMin;
+			float texW = uSpan > 1e-6F ? Math.abs(src.uvs[2] - src.uvs[0]) / uSpan : 0.0F;
+			float texH = vSpan > 1e-6F ? Math.abs(src.uvs[3] - src.uvs[1]) / vSpan : 0.0F;
+			boolean texelCenter = FgmPlusConfig.meshTexelCenterUv && texW > 0.0F && texH > 0.0F;
+
 			for(int i = 0; i < segS; i++) {
 				float s0 = (float) i / segS, s1 = (float) (i + 1) / segS;
 				for(int j = 0; j < segT; j++) {
@@ -195,20 +173,23 @@ public final class RoundBreastMesh {
 						uC = c[2].u(); vC = c[2].v();
 						uD = c[3].u(); vD = c[3].v();
 					} else {
-						// Sample inside each cell. Rounding corners independently can fetch
-						// the next face's pixels or give Iris a zero-area UV triangle.
-						float sInset = insetUv ? UV_CELL_INSET * (s1 - s0) : 0.0F;
-						float tInset = insetUv ? UV_CELL_INSET * (t1 - t0) : 0.0F;
-						float uvS0 = s0 + sInset, uvS1 = s1 - sInset;
-						float uvT0 = t0 + tInset, uvT1 = t1 - tInset;
-						uA = lerp(lerp(c[0].u(), c[1].u(), uvS0), lerp(c[3].u(), c[2].u(), uvS0), uvT0);
-						vA = lerp(lerp(c[0].v(), c[1].v(), uvS0), lerp(c[3].v(), c[2].v(), uvS0), uvT0);
-						uB = lerp(lerp(c[0].u(), c[1].u(), uvS1), lerp(c[3].u(), c[2].u(), uvS1), uvT0);
-						vB = lerp(lerp(c[0].v(), c[1].v(), uvS1), lerp(c[3].v(), c[2].v(), uvS1), uvT0);
-						uC = lerp(lerp(c[0].u(), c[1].u(), uvS1), lerp(c[3].u(), c[2].u(), uvS1), uvT1);
-						vC = lerp(lerp(c[0].v(), c[1].v(), uvS1), lerp(c[3].v(), c[2].v(), uvS1), uvT1);
-						uD = lerp(lerp(c[0].u(), c[1].u(), uvS0), lerp(c[3].u(), c[2].u(), uvS0), uvT1);
-						vD = lerp(lerp(c[0].v(), c[1].v(), uvS0), lerp(c[3].v(), c[2].v(), uvS0), uvT1);
+						uA = lerp(lerp(c[0].u(), c[1].u(), s0), lerp(c[3].u(), c[2].u(), s0), t0);
+						vA = lerp(lerp(c[0].v(), c[1].v(), s0), lerp(c[3].v(), c[2].v(), s0), t0);
+						uB = lerp(lerp(c[0].u(), c[1].u(), s1), lerp(c[3].u(), c[2].u(), s1), t0);
+						vB = lerp(lerp(c[0].v(), c[1].v(), s1), lerp(c[3].v(), c[2].v(), s1), t0);
+						uC = lerp(lerp(c[0].u(), c[1].u(), s1), lerp(c[3].u(), c[2].u(), s1), t1);
+						vC = lerp(lerp(c[0].v(), c[1].v(), s1), lerp(c[3].v(), c[2].v(), s1), t1);
+						uD = lerp(lerp(c[0].u(), c[1].u(), s0), lerp(c[3].u(), c[2].u(), s0), t1);
+						vD = lerp(lerp(c[0].v(), c[1].v(), s0), lerp(c[3].v(), c[2].v(), s0), t1);
+						if(texelCenter) {
+							//collapse each sub-quad's corners into the texel it covers, so
+							//every sample lands inside the texel instead of on atlas
+							//texel boundaries (shader packs render those fragments black)
+							uA = snapTexel(uA, texW); vA = snapTexel(vA, texH);
+							uB = snapTexel(uB, texW); vB = snapTexel(vB, texH);
+							uC = snapTexel(uC, texW); vC = snapTexel(vC, texH);
+							uD = snapTexel(uD, texW); vD = snapTexel(vD, texH);
+						}
 					}
 					emit(out, quad * 32,
 							resolvePoint(noMorph, src, corner(ax, ay, az, bx, by, bz, ex, ey, ez, dx, dy, dz, s0, t0), cx, cy, cz, hx, hy, hz, n, bridgeSign, ext),
@@ -338,6 +319,11 @@ public final class RoundBreastMesh {
 		out[o] = p[0] / 16f; out[o + 1] = p[1] / 16f; out[o + 2] = p[2] / 16f;
 		out[o + 3] = p[3]; out[o + 4] = p[4]; out[o + 5] = p[5];
 		out[o + 6] = u; out[o + 7] = v;
+	}
+
+	//u in [0,1] over texW texels -> the CENTER of the texel containing u
+	private static float snapTexel(float u, float texSize) {
+		return ((float) Math.floor(u * texSize) + 0.5F) / texSize;
 	}
 
 	private static float lerp(float a, float b, float t) {

@@ -2,7 +2,7 @@
 	"schemaVersion": 1,
 	"id": "fgmplus",
 	"version": "${version}",
-	"name": "FGM-Plus-26.3-fabric",
+	"name": "FGM Plus",
 	"description": "Real per-player bust shaping for Wildfire's Female Gender Mod: perkiness, per-axis scaling with anti-clip back flattening, and custom hurt sounds. Based on Female Plastic Surgery by Rinko1231 (GPLv3).",
 	"authors": [
 		"E33EPUS"
@@ -26,11 +26,11 @@
 		"fgmplus.mixins.json"
 	],
 	"depends": {
-		"fabricloader": ">=0.19.3",
-		"minecraft": "${minecraft_dependency}",
+		"fabricloader": ">=0.18.4",
+		"minecraft": ">=26.1 <26.2",
 		"java": ">=25",
 		"fabric-api": "*",
-		"female_gender_mod": ">=5.0.0"
+		"female_gender_mod": "*"
 	},
 	"custom": {
 		"modmenu": {

@@ -6,7 +6,6 @@ import com.google.gson.JsonObject;
 import io.github.e33epus.fgmplus.FgmPlusMod;
 import net.fabricmc.loader.api.FabricLoader;
 
-import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -31,8 +30,14 @@ public final class FgmPlusConfig {
 	public static double bounceMultiplierMax = 1.0;  // [0.5, 3.0], FGM default bound 0.5
 	public static double floppyMultiplierMax = 1.5;  // [1.0, 3.0], FGM default bound 1.0
 
-	// A shared depth transform keeps adjacent roundness quads joined at the back plane.
-	public static String meshPullMode = "continuous"; // continuous | per_vertex | off
+	// Back-flatten pull strategy for the roundness mesh. Iris recomputes entity face
+	// normals from vertex positions (MixinBufferBuilder#fillExtendedData overwrites what
+	// we write), so a per-vertex pull stretches curved quads and their recomputed
+	// normals rotate away from the surface - under directional-lighting shader packs
+	// (Photon etc.) those quads render black; vanilla's 0.4 ambient floor hides it.
+	// per_quad translates each quad rigidly by its deepest vertex's depth, keeping the
+	// shape (and therefore the recomputed normal) intact. "off" disables the pull.
+	public static String meshPullMode = "per_quad"; // per_quad | per_vertex | off
 	public static boolean meshDebugLog = false;     // throttled pull stats for diagnosing shader-only artifacts
 	// Render the roundness mesh as the flat box in Iris's shadow pass. Vanilla entity
 	// geometry is all planar boxes, so shader packs tune their shadow-map normal bias
@@ -48,8 +53,12 @@ public final class FgmPlusConfig {
 	public static boolean meshDebugNoBridge = false;  // mesh builds without the cleavage bridge
 	public static int meshDebugMaxQuads = -1;         // emit only the first N quads of the mesh (-1 = all); count sweep
 	public static boolean meshDebugFullUv = false;   // each sub-quad gets the source face's full corner UVs (smeared texture, diagnostic)
-	// Keep UVs inside their subdivision cells without collapsing their gradients.
-	// Retain the existing JSON key so existing configurations keep their preference.
+	//Snap every sub-quad's corners to the center of the texel it covers. The exact
+	//1-texel sub-quad UVs sit ON atlas texel boundaries, and shader packs' mipmapped
+	//atlas sampling renders those fragments black (vanilla's un-mipped sampling is
+	//fine) - the Photon black-chest report. Texel-center UVs keep the same 1:1 texel
+	//mapping but every sample lands inside the texel. fullUv (whole face rect per
+	//sub-quad) renders lit in-game, confirming the sampling-side mechanism.
 	public static boolean meshTexelCenterUv = true;
 
 	private static boolean loaded;
@@ -107,21 +116,16 @@ public final class FgmPlusConfig {
 		}
 		//config lives at config/fgmplus/fgmplus.json since 1.6.1 (was fgmplus.json in
 		//the config root); carry the old file over so slider-widening settings survive
-		Path legacy = FabricLoader.getInstance().getConfigDir().resolve(FgmPlusMod.MODID + ".json");
-		Path source = file;
 		try {
+			Path legacy = FabricLoader.getInstance().getConfigDir().resolve(FgmPlusMod.MODID + ".json");
 			if(!Files.exists(file) && Files.isRegularFile(legacy)) {
-				Files.createDirectories(file.getParent());
 				Files.move(legacy, file);
 			}
-		} catch(IOException | SecurityException e) {
+		} catch(Exception e) {
 			FgmPlusMod.LOGGER.warn("FGM Plus: could not migrate the old config file", e);
-			if(!Files.isRegularFile(file)) {
-				source = legacy;
-			}
 		}
-		if(Files.isRegularFile(source)) {
-			try(Reader reader = Files.newBufferedReader(source, StandardCharsets.UTF_8)) {
+		if(Files.isRegularFile(file)) {
+			try(Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
 				JsonObject json = GSON.fromJson(reader, JsonObject.class);
 				if(json != null) {
 					bustSizeMax = clamp(opt(json, "bustSizeMax", bustSizeMax), 0.8, 4.0);
@@ -143,12 +147,9 @@ public final class FgmPlusConfig {
 				FgmPlusMod.LOGGER.warn("FGM Plus: failed to read config, using defaults", e);
 			}
 		}
-		if(source.equals(legacy)) {
-			return;
-		}
 		save();
 		try {
-			lastMtime = Files.getLastModifiedTime(file).toMillis();
+			lastMtime = Files.getLastModifiedTime(file()).toMillis();
 		} catch(Throwable ignored) {
 		}
 	}
@@ -202,10 +203,7 @@ public final class FgmPlusConfig {
 	private static String optPullMode(JsonObject json) {
 		try {
 			String value = json.get("meshPullMode").getAsString();
-			if("per_quad".equals(value)) {
-				return "continuous";
-			}
-			if("continuous".equals(value) || "per_vertex".equals(value) || "off".equals(value)) {
+			if("per_quad".equals(value) || "per_vertex".equals(value) || "off".equals(value)) {
 				return value;
 			}
 		} catch(Exception ignored) {
